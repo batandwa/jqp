@@ -8,6 +8,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/noahgorstein/jqp/tui/theme"
+	"os"
+	"bufio"
 )
 
 type Bubble struct {
@@ -28,13 +30,40 @@ func New(jqtheme theme.Theme) Bubble {
 	ti.TextStyle.Height(1)
 	ti.Prompt = lipgloss.NewStyle().Bold(true).Foreground(jqtheme.Secondary).Render("jq > ")
 
+	// set to empty pointer
+	historySelected := (*list.Element)(nil)
+	historyList := list.New()
+
+	if history, err := loadHistory(".jqp_history"); err == nil {
+		for _, entry := range history {
+			historyList.PushBack(entry)
+		}
+
+		historySelected = historyList.Front()
+	}
+
 	return Bubble{
 		Styles:    s,
 		textinput: ti,
-
-		history:       list.New(),
+		history:       historyList,
+		historySelected: historySelected,
 		historyMaxLen: 512,
 	}
+}
+
+func loadHistory(filename string) ([]string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	return lines, scanner.Err()
 }
 
 func (b *Bubble) SetBorderColor(color lipgloss.TerminalColor) {
@@ -51,6 +80,22 @@ func (b *Bubble) RotateHistory() {
 	if b.history.Len() > b.historyMaxLen {
 		b.history.Remove(b.history.Back())
 	}
+
+	updateHistoryFile(".jqp_history", b.history)
+}
+
+func updateHistoryFile(filename string, history *list.List) {
+	file, err := os.Create(filename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for e := history.Front(); e != nil; e = e.Next() {
+		writer.WriteString(e.Value.(string) + "\n")
+	}
+	writer.Flush()
 }
 
 func (Bubble) Init() tea.Cmd {
