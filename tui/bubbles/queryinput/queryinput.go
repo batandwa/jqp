@@ -2,6 +2,7 @@ package queryinput
 
 import (
 	"container/list"
+	"path/filepath"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -33,8 +34,9 @@ func New(jqtheme theme.Theme) Bubble {
 	// set to empty pointer
 	historySelected := (*list.Element)(nil)
 	historyList := list.New()
+	historyFileName := GetHistoryFilepath()
 
-	if history, err := loadHistory(".jqp_history"); err == nil {
+	if history, err := loadHistory(historyFileName); err == nil {
 		for _, entry := range history {
 			historyList.PushBack(entry)
 		}
@@ -49,6 +51,21 @@ func New(jqtheme theme.Theme) Bubble {
 		historySelected: historySelected,
 		historyMaxLen: 512,
 	}
+}
+
+func GetHistoryFilepath() (string, error) {
+    filepath := os.Getenv("JQP_HISTFILE")
+
+    if len(filepath) != 0 {
+		return filepath, nil
+    }
+
+	homeDirPath, err := os.UserHomeDir()
+	if err != nil {
+		return nil, error
+	}
+
+	return filepath.Join(homeDirPath, ".jqp_history"), nil
 }
 
 func loadHistory(filename string) ([]string, error) {
