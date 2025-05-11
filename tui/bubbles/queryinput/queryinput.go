@@ -34,9 +34,9 @@ func New(jqtheme theme.Theme) Bubble {
 	// set to empty pointer
 	historySelected := (*list.Element)(nil)
 	historyList := list.New()
-	historyFileName := GetHistoryFilepath()
+	historyFileName, pathErr := GetHistoryFilepath()
 
-	if history, err := loadHistory(historyFileName); err == nil {
+	if history, err := loadHistory(historyFileName); pathErr == nil && err == nil {
 		for _, entry := range history {
 			historyList.PushBack(entry)
 		}
@@ -54,15 +54,15 @@ func New(jqtheme theme.Theme) Bubble {
 }
 
 func GetHistoryFilepath() (string, error) {
-    filepath := os.Getenv("JQP_HISTFILE")
+    path := os.Getenv("JQP_HISTFILE")
 
-    if len(filepath) != 0 {
-		return filepath, nil
+    if len(path) != 0 {
+		return path, nil
     }
 
 	homeDirPath, err := os.UserHomeDir()
 	if err != nil {
-		return nil, error
+		return "", err
 	}
 
 	return filepath.Join(homeDirPath, ".jqp_history"), nil
